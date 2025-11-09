@@ -1,0 +1,3 @@
+[submodule "colintle-matrix"]
+	path = colintle-matrix
+	url = git@github.com:colintle/colintle-matrix.git
