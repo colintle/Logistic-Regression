@@ -1,0 +1,3 @@
+[submodule "matrix-library"]
+	path = matrix-library
+	url = git@github.com:colintle/colintle-matrix.git
