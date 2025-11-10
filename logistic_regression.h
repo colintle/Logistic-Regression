@@ -27,6 +27,10 @@ public:
   const matrix_library::Tensor<double> &get_bias() const;
 
 private:
+  // Converts class labels in y to one-hot encoding. Input shape: (N, 1), output
+  // shape: (N, C)
+  matrix_library::Tensor<double>
+  one_hot_encode(const matrix_library::Tensor<double> &y) const;
   // Row shape: (1, C)
   // Modifies the input row in-place
   static void softmax(std::vector<double> &row);
