@@ -16,7 +16,7 @@ public:
   LogisticRegression &operator=(const LogisticRegression &) = delete;
 
   // X shape: (N, M)
-  // y shape: (N, 1) with class labels (0 to C-1)
+  // y shape: (N) with class labels (0 to C-1)
   void fit(const matrix_library::Tensor<double> &X,
            const matrix_library::Tensor<double> &y);
   // X shape: (K, M)
@@ -36,7 +36,7 @@ private:
   // (weights_.shape()[0])
   void validate_inputs(const matrix_library::Tensor<double> &X,
                        const matrix_library::Tensor<double> &y) const;
-  // Converts class labels in y to one-hot encoding. Input shape: (N, 1), output
+  // Converts class labels in y to one-hot encoding. Input shape: (N), output
   // shape: (N, C)
   matrix_library::Tensor<double>
   one_hot_encode(const matrix_library::Tensor<double> &y) const;

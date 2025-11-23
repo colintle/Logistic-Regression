@@ -14,41 +14,37 @@ LogisticRegression::LogisticRegression(size_t input_dim, size_t num_classes,
 void LogisticRegression::validate_inputs(
     const matrix_library::Tensor<double> &X,
     const matrix_library::Tensor<double> &y) const {
-  const auto &xshape = X.shape();
-  const auto &yshape = y.shape();
+  const auto &x_shape = X.shape();
+  const auto &y_shape = y.shape();
 
   if (num_classes_ == 0)
     throw std::logic_error(
         "num_classes_ must be set via constructor before validation");
 
-  // X must be 2D: (N, M)
-  if (xshape.size() != 2)
+  if (x_shape.size() != 2)
     throw std::invalid_argument("X must be a 2D tensor with shape (N, M)");
 
-  size_t N = xshape[0];
-  size_t M = xshape[1];
+  size_t N = x_shape[0];
+  size_t M = x_shape[1];
 
   if (N == 0)
     throw std::invalid_argument("N must be greater than 0");
 
-  // y must be 1D: (N)
-  if (yshape.size() != 1)
+  if (y_shape.size() != 1)
     throw std::invalid_argument("y must be a 1D vector of length N");
-  if (yshape[0] != N)
+  if (y_shape[0] != N)
     throw std::invalid_argument("y length must match X's number of rows (N)");
 
-  // M must match model input size (weights_.shape()[0])
-  const auto &wshape = weights_.shape();
-  if (wshape.size() != 2)
+  const auto &w_shape = weights_.shape();
+  if (w_shape.size() != 2)
     throw std::logic_error("weights_ must be 2D with shape (M, C)");
-  if (M != wshape[0])
+  if (M != w_shape[0])
     throw std::invalid_argument(
         "X has incorrect number of features (M) for this model");
 }
 
 void LogisticRegression::fit(const matrix_library::Tensor<double> &X,
                              const matrix_library::Tensor<double> &y) {
-  // Validate shapes and sizes before training
   validate_inputs(X, y);
   // TODO: implement training
 }
