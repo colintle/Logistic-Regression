@@ -9,7 +9,7 @@
 // C is the number of classes
 class LogisticRegression {
 public:
-  LogisticRegression(size_t input_size, size_t num_classes,
+  LogisticRegression(size_t input_dim, size_t num_classes,
                      double learning_rate, int iterations);
 
   LogisticRegression(const LogisticRegression &) = delete;
