@@ -9,8 +9,8 @@
 // C is the number of classes
 class LogisticRegression {
 public:
-  LogisticRegression(size_t input_dim, size_t num_classes,
-                     double learning_rate, int iterations);
+  LogisticRegression(size_t input_dim, size_t num_classes, double learning_rate,
+                     int iterations);
 
   LogisticRegression(const LogisticRegression &) = delete;
   LogisticRegression &operator=(const LogisticRegression &) = delete;
@@ -28,6 +28,14 @@ public:
   const matrix_library::Tensor<double> &get_bias() const;
 
 private:
+  // Validate that X and y have compatible shapes and sizes
+  // - X must be 2D with shape (N, M)
+  // - y must be 1D with shape (N)
+  // - N > 0
+  // - M must equal input feature size used to create weights
+  // (weights_.shape()[0])
+  void validate_inputs(const matrix_library::Tensor<double> &X,
+                       const matrix_library::Tensor<double> &y) const;
   // Converts class labels in y to one-hot encoding. Input shape: (N, 1), output
   // shape: (N, C)
   matrix_library::Tensor<double>
