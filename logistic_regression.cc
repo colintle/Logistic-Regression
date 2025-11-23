@@ -136,6 +136,48 @@ const matrix_library::Tensor<double> &LogisticRegression::get_bias() const {
   return bias_;
 }
 
+matrix_library::Tensor<double>
+LogisticRegression::predict(const matrix_library::Tensor<double> &X) const {
+  const auto &x_shape = X.shape();
+  if (x_shape.size() != 2)
+    throw std::invalid_argument("X must be a 2D tensor with shape (K, M)");
+
+  const size_t K = x_shape[0];
+  const size_t M = x_shape[1];
+
+  const auto &w_shape = weights_.shape();
+  if (w_shape.size() != 2)
+    throw std::logic_error("weights_ must be 2D with shape (M, C)");
+  if (M != w_shape[0])
+    throw std::invalid_argument(
+        "Input feature dimension does not match model weights.");
+
+  const size_t C = w_shape[1];
+  if (K == 0) {
+    return matrix_library::Tensor<double>({0, C});
+  }
+
+  // logits = X @ W + b -> (K, C)
+  auto logits = matrix_library::operations::multiply(X, weights_);
+  matrix_library::Tensor<double> bias_tiled({K, C});
+  for (size_t i = 0; i < K; ++i)
+    for (size_t j = 0; j < C; ++j)
+      bias_tiled[{i, j}] = bias_[{0, j}];
+  logits = matrix_library::operations::add(logits, bias_tiled);
+
+  // probs = softmax(logits) row-wise
+  matrix_library::Tensor<double> probs({K, C});
+  for (size_t i = 0; i < K; ++i) {
+    std::vector<double> row(C);
+    for (size_t j = 0; j < C; ++j)
+      row[j] = logits[{i, j}];
+    softmax(row);
+    for (size_t j = 0; j < C; ++j)
+      probs[{i, j}] = row[j];
+  }
+  return probs;
+}
+
 void LogisticRegression::softmax(std::vector<double> &row) {
   if (row.empty())
     return;

@@ -140,3 +140,128 @@ TEST(LogisticRegressionTest, ValidateInputsErrors) {
     y_bad[{i}] = 0;
   EXPECT_THROW(lr.fit(X, y_bad), std::invalid_argument);
 }
+
+TEST(LogisticRegressionTest, PredictOnTrainedBinary) {
+  const size_t N = 8;
+  const size_t M = 2;
+  const size_t C = 2;
+
+  Tensor<double> X({N, M});
+  X[{0, 0}] = 0.0;
+  X[{0, 1}] = 0.0;
+  X[{1, 0}] = 0.0;
+  X[{1, 1}] = 1.0;
+  X[{2, 0}] = 1.0;
+  X[{2, 1}] = 0.0;
+  X[{3, 0}] = 0.5;
+  X[{3, 1}] = 0.2;
+  X[{4, 0}] = 3.0;
+  X[{4, 1}] = 3.0;
+  X[{5, 0}] = 4.0;
+  X[{5, 1}] = 4.0;
+  X[{6, 0}] = 3.0;
+  X[{6, 1}] = 4.0;
+  X[{7, 0}] = 4.0;
+  X[{7, 1}] = 3.0;
+
+  Tensor<double> y({N});
+  y[{0}] = 0;
+  y[{1}] = 0;
+  y[{2}] = 0;
+  y[{3}] = 0;
+  y[{4}] = 1;
+  y[{5}] = 1;
+  y[{6}] = 1;
+  y[{7}] = 1;
+
+  LogisticRegression lr(M, C, /*lr*/ 0.1, /*iters*/ 1500);
+  lr.fit(X, y);
+
+  auto probs = lr.predict(X);
+  ASSERT_EQ(probs.shape().size(), 2u);
+  ASSERT_EQ(probs.shape()[0], N);
+  ASSERT_EQ(probs.shape()[1], C);
+
+  for (size_t i = 0; i < N; ++i) {
+    double sum = 0.0;
+    for (size_t j = 0; j < C; ++j) {
+      double p = probs[{i, j}];
+      EXPECT_GE(p, 0.0);
+      EXPECT_LE(p, 1.0);
+      sum += p;
+    }
+    EXPECT_NEAR(sum, 1.0, 1e-6);
+
+    size_t pred = argmax_row(probs, i);
+    EXPECT_EQ(pred, static_cast<size_t>(y[{i}])) << "i=" << i;
+  }
+}
+
+TEST(LogisticRegressionTest, PredictOnTrainedMulticlass) {
+  const size_t N = 6;
+  const size_t M = 2;
+  const size_t C = 3;
+
+  Tensor<double> X({N, M});
+  X[{0, 0}] = 0.0;
+  X[{0, 1}] = 0.0;
+  X[{1, 0}] = 0.2;
+  X[{1, 1}] = 0.1;
+  X[{2, 0}] = 4.0;
+  X[{2, 1}] = 0.0;
+  X[{3, 0}] = 5.0;
+  X[{3, 1}] = 0.2;
+  X[{4, 0}] = 0.0;
+  X[{4, 1}] = 4.0;
+  X[{5, 0}] = 0.1;
+  X[{5, 1}] = 5.0;
+
+  Tensor<double> y({N});
+  y[{0}] = 0;
+  y[{1}] = 0;
+  y[{2}] = 1;
+  y[{3}] = 1;
+  y[{4}] = 2;
+  y[{5}] = 2;
+
+  LogisticRegression lr(M, C, /*lr*/ 0.1, /*iters*/ 2000);
+  lr.fit(X, y);
+
+  auto probs = lr.predict(X);
+  ASSERT_EQ(probs.shape().size(), 2u);
+  ASSERT_EQ(probs.shape()[0], N);
+  ASSERT_EQ(probs.shape()[1], C);
+
+  for (size_t i = 0; i < N; ++i) {
+    double sum = 0.0;
+    for (size_t j = 0; j < C; ++j) {
+      double p = probs[{i, j}];
+      EXPECT_GE(p, 0.0);
+      EXPECT_LE(p, 1.0);
+      sum += p;
+    }
+    EXPECT_NEAR(sum, 1.0, 1e-6);
+
+    size_t pred = argmax_row(probs, i);
+    EXPECT_EQ(pred, static_cast<size_t>(y[{i}])) << "i=" << i;
+  }
+}
+
+TEST(LogisticRegressionTest, PredictEmptyInput) {
+  const size_t M = 2;
+  const size_t C = 3;
+  LogisticRegression lr(M, C, 0.1, 1);
+  Tensor<double> X0({0, M});
+  auto probs = lr.predict(X0);
+  ASSERT_EQ(probs.shape().size(), 2u);
+  EXPECT_EQ(probs.shape()[0], 0u);
+  EXPECT_EQ(probs.shape()[1], C);
+}
+
+TEST(LogisticRegressionTest, PredictFeatureMismatchThrows) {
+  const size_t M = 2;
+  const size_t C = 2;
+  LogisticRegression lr(M, C, 0.1, 1);
+  Tensor<double> Xbad({1, M + 1});
+  EXPECT_THROW(lr.predict(Xbad), std::invalid_argument);
+}
