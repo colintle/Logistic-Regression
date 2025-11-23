@@ -4,10 +4,16 @@
 #include <stdexcept>
 #include <vector>
 
+#include "operations/add.h"
+#include "operations/multiply.h"
+#include "operations/scale.h"
+#include "operations/subtract.h"
+#include "operations/transpose.h"
+
 LogisticRegression::LogisticRegression(size_t input_dim, size_t num_classes,
                                        double learning_rate, int iterations)
     : learning_rate_(learning_rate), iterations_(iterations),
-      weights_(matrix_library::Tensor<double>({input_dim, 1})),
+      weights_(matrix_library::Tensor<double>({input_dim, num_classes})),
       bias_(matrix_library::Tensor<double>({1, num_classes})),
       num_classes_(num_classes) {}
 
@@ -46,7 +52,56 @@ void LogisticRegression::validate_inputs(
 void LogisticRegression::fit(const matrix_library::Tensor<double> &X,
                              const matrix_library::Tensor<double> &y) {
   validate_inputs(X, y);
-  // TODO: implement training
+  const size_t N = X.shape()[0];
+  const size_t M = X.shape()[1];
+  const size_t C = num_classes_;
+
+  // Precompute a row vector of ones for bias gradient: shape (1, N)
+  matrix_library::Tensor<double> ones_row({1, N});
+  for (size_t i = 0; i < N; ++i)
+    ones_row[{0, i}] = 1.0;
+
+  // One-hot encode targets once (shape: N x C)
+  matrix_library::Tensor<double> Y = one_hot_encode(y);
+
+  for (int iter = 0; iter < iterations_; ++iter) {
+    // logits = X @ W + b  -> (N, C)
+    auto logits = matrix_library::operations::multiply(X, weights_);
+    matrix_library::Tensor<double> bias_tiled({N, C});
+    for (size_t i = 0; i < N; ++i)
+      for (size_t j = 0; j < C; ++j)
+        bias_tiled[{i, j}] = bias_[{0, j}];
+    logits = matrix_library::operations::add(logits, bias_tiled);
+
+    // probs = softmax(logits) row-wise
+    matrix_library::Tensor<double> probs({N, C});
+    for (size_t i = 0; i < N; ++i) {
+      std::vector<double> row(C);
+      for (size_t j = 0; j < C; ++j)
+        row[j] = logits[{i, j}];
+      softmax(row);
+      for (size_t j = 0; j < C; ++j)
+        probs[{i, j}] = row[j];
+    }
+
+    // diff = probs - Y  -> (N, C)
+    auto diff = matrix_library::operations::subtract(probs, Y);
+
+    // dW = (1/N) * (X^T @ diff) -> (M, C)
+    auto XT = matrix_library::operations::transpose(X);
+    auto dW = matrix_library::operations::multiply(XT, diff);
+    dW = matrix_library::operations::scale(dW, 1.0 / static_cast<double>(N));
+
+    // dB = (1/N) * (ones_row @ diff) -> (1, C)
+    auto dB = matrix_library::operations::multiply(ones_row, diff);
+    dB = matrix_library::operations::scale(dB, 1.0 / static_cast<double>(N));
+
+    // Update parameters
+    weights_ = matrix_library::operations::subtract(
+        weights_, matrix_library::operations::scale(dW, learning_rate_));
+    bias_ = matrix_library::operations::subtract(
+        bias_, matrix_library::operations::scale(dB, learning_rate_));
+  }
 }
 
 matrix_library::Tensor<double> LogisticRegression::one_hot_encode(
@@ -79,4 +134,27 @@ const matrix_library::Tensor<double> &LogisticRegression::get_weights() const {
 }
 const matrix_library::Tensor<double> &LogisticRegression::get_bias() const {
   return bias_;
+}
+
+void LogisticRegression::softmax(std::vector<double> &row) {
+  if (row.empty())
+    return;
+  double max_val = row[0];
+  for (double v : row)
+    if (v > max_val)
+      max_val = v;
+
+  double sum = 0.0;
+  for (double &v : row) {
+    v = std::exp(v - max_val);
+    sum += v;
+  }
+  if (sum == 0.0) {
+    double u = 1.0 / static_cast<double>(row.size());
+    for (double &v : row)
+      v = u;
+  } else {
+    for (double &v : row)
+      v /= sum;
+  }
 }
